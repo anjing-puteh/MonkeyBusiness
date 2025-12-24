@@ -16,7 +16,7 @@ def get_ip():
 
 ip = get_ip()
 port = 8000
-services_prefix = "/core"
+response_compression = False
 verbose_log = True
 
 arcade = "Ｍ０ＮＫＹＢＵＳ１Ｎ３Ｚ"

@@ -10,10 +10,9 @@ from typing import Optional
 import config
 import utils.card as conv
 import utils.musicdata_tool as mdt
-from utils.lz77 import EamuseLZ77
 
 import xml.etree.ElementTree as ET
-import ujson as json
+import json
 from os import path
 
 
@@ -309,7 +308,6 @@ async def iidx_receive_mdb(file: UploadFile = File(...)) -> bytes:
                 open(iidx_metadata, "w", encoding="utf8"),
                 indent=4,
                 ensure_ascii=False,
-                escape_forward_slashes=False,
             )
             return Response(status_code=201)
         except Exception as e:

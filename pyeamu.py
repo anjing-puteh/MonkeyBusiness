@@ -2,7 +2,7 @@ from urllib.parse import urlparse, urlunparse, urlencode
 
 import uvicorn
 
-import ujson as json
+import json
 from os import name, path
 from typing import Optional
 
@@ -33,14 +33,14 @@ for host in ("localhost", config.ip, socket.gethostname()):
 server_services_urls = []
 for server_address in server_addresses:
     server_services_urls.append(
-        urlunparse(("http", server_address, config.services_prefix, None, None, None))
+        urlunparse(("http", server_address, "/core", None, None, None))
     )
 
 settings = {}
 for s in (
     "ip",
     "port",
-    "services_prefix",
+    "response_compression",
     "verbose_log",
     "arcade",
     "paseli",
@@ -64,7 +64,7 @@ app.add_middleware(
 if path.exists("webui"):
     webui = True
     with open(path.join("webui", "monkey.json"), "w") as f:
-        json.dump(settings, f, indent=2, escape_forward_slashes=False)
+        json.dump(settings, f, indent=2)
     app.mount("/webui", StaticFiles(directory="webui", html=True), name="webui")
 else:
     webui = False
@@ -112,8 +112,8 @@ if __name__ == "__main__":
     uvicorn.run("pyeamu:app", host="0.0.0.0", port=config.port, reload=True)
 
 
-@app.post(urlpathjoin([config.services_prefix]))
-@app.post(urlpathjoin([config.services_prefix, "/{gameinfo}/services/get"]))
+@app.post("/core")
+@app.post("/core/{gameinfo}/services/get")
 async def services_get(
     request: Request,
     model: Optional[str] = None,

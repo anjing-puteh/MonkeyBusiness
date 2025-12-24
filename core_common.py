@@ -1,6 +1,5 @@
 import config
 
-import random
 import time
 
 from lxml.builder import ElementMaker
@@ -8,7 +7,7 @@ from lxml.builder import ElementMaker
 from kbinxml import KBinXML
 
 from utils.arc4 import EamuseARC4
-from utils.lz77 import EamuseLZ77
+from utils.lz77 import lz77_decode, lz77_encode
 
 
 def _add_val_as_str(elm, val):
@@ -34,6 +33,17 @@ def _add_list_as_str(elm, vals):
 
     else:
         return new_val
+
+
+def _prng():
+    state = 0x41C64E6D
+    while True:
+        x = (state * 0x838C9CDA) + 0x6072
+        # state = (state * 0x41C64E6D + 0x3039)
+        # state = (state * 0x41C64E6D + 0x3039)
+        state = (state * 0xC2A29A69 + 0xD3DC167E) & 0xFFFFFFFF
+        yield (x & 0x7FFF0000) | state >> 0xF & 0xFFFF
+prng_init = _prng()
 
 
 E = ElementMaker(
@@ -134,22 +144,19 @@ async def core_process_request(request):
     if not cl or not data:
         return {}
 
-    if "X-Compress" in request.headers:
-        request.compress = request.headers.get("X-Compress")
-    else:
-        request.compress = None
+    request.compress = request.headers.get("X-Compress", "none") # intentionally lowercase 'none' (NOT None)
 
     if "X-Eamuse-Info" in request.headers:
         xeamuseinfo = request.headers.get("X-Eamuse-Info")
-        key = bytes.fromhex(xeamuseinfo[2:].replace("-", ""))
-        xml_dec = EamuseARC4(key).decrypt(data[: int(cl)])
+        version, unix_time, prng = xeamuseinfo.split("-")
+        xml_dec = EamuseARC4(bytes.fromhex(unix_time), bytes.fromhex(prng)).decrypt(data[: int(cl)])
         request.is_encrypted = True
     else:
         xml_dec = data[: int(cl)]
         request.is_encrypted = False
 
     if request.compress == "lz77":
-        xml_dec = EamuseLZ77.decode(xml_dec)
+        xml_dec = lz77_decode(xml_dec)
 
     xml = KBinXML(xml_dec, convert_illegal_things=True)
     root = xml.xml_doc
@@ -196,17 +203,24 @@ async def core_prepare_response(request, xml):
 
     response_headers = {"User-Agent": "EAMUSE.Httpac/1.0"}
 
-    if request.is_encrypted:
-        xeamuseinfo = "1-%08x-%04x" % (int(time.time()), random.randint(0x0000, 0xFFFF))
-        response_headers["X-Eamuse-Info"] = xeamuseinfo
-        key = bytes.fromhex(xeamuseinfo[2:].replace("-", ""))
-        response = EamuseARC4(key).encrypt(xml_binary)
+    if config.response_compression:
+        response_headers["X-Compress"] = request.compress
+        if request.compress == "lz77":
+            response = lz77_encode(xml_binary) # very slow
+        else:
+            response = xml_binary
     else:
-        response = bytes(xml_binary)
+        response_headers["X-Compress"] = "none" # intentionally lowercase 'none' (NOT None)
+        response = xml_binary
 
-    request.compress = None
-    # if request.compress == "lz77":
-    #     response_headers["X-Compress"] = request.compress
-    #     response = EamuseLZ77.encode(response)
+
+    if request.is_encrypted:
+        version = 1
+        unix_time = int(time.time())
+        prng = next(prng_init) & 0xFFFF
+        response_headers["X-Eamuse-Info"] = f"{version}-{unix_time:04x}-{prng:02x}"
+        response = EamuseARC4(unix_time.to_bytes(4), prng.to_bytes(2)).encrypt(response)
+    else:
+        response = bytes(response)
 
     return response, response_headers

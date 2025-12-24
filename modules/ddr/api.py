@@ -8,10 +8,10 @@ from pydantic import BaseModel
 
 import config
 import utils.card as conv
-from utils.lz77 import EamuseLZ77
+from utils.lz77 import lz77_decode
 
 import lxml.etree as ET
-import ujson as json
+import json
 import struct
 from typing import Dict, List, Tuple
 from os import path
@@ -202,7 +202,7 @@ class ARC:
             return self.__data[fileoffset : (fileoffset + compressedsize)]
         else:
             # Compressed
-            return EamuseLZ77.decode(
+            return lz77_decode(
                 self.__data[fileoffset : (fileoffset + compressedsize)]
             )
 
@@ -259,6 +259,6 @@ async def ddr_receive_mdb(file: UploadFile = File(...)) -> bytes:
                 mdb[mcode] = mdb_old[mcode]
 
     with open(ddr_metadata, "w", encoding="utf-8") as fp:
-        json.dump(mdb, fp, indent=4, ensure_ascii=False, escape_forward_slashes=False)
+        json.dump(mdb, fp, indent=4, ensure_ascii=False)
 
     return Response(status_code=201)
