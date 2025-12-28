@@ -129,7 +129,10 @@ async def game_sv_common(ver: str, request: Request):
 
     if unlock == []:
         for i in range(2400):
-            for j in range(0, 5):
+            
+            j_limit = 6 if i == 636 else 5
+            
+            for j in range(j_limit):
                 unlock.append([i, j])
 
 
