@@ -1,5 +1,6 @@
 import config
 
+import os
 import re
 import threading
 import time
@@ -14,6 +15,24 @@ from utils.lz77 import lz77_decode, lz77_encode
 
 # Skip LZ77 for tiny bodies that always expand under AVS framing overhead.
 LZ77_MIN_RAW_BYTES = 256
+
+_ANSI_RE = re.compile(r"\033\[[0-9;]*m")
+_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(config.__file__)), "MonkeyBusiness.log")
+_LOG_LOCK = threading.Lock()
+
+
+def _verbose_log(*lines: str) -> None:
+    """Print and/or append dump lines; destinations controlled independently."""
+    if config.verbose_log:
+        for line in lines:
+            print(line)
+    if not config.log_to_file:
+        return
+    plain = "\n".join(_ANSI_RE.sub("", line) for line in lines) + "\n"
+    with _LOG_LOCK:
+        with open(_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(plain)
+            f.flush()
 
 # XML declaration charset aliases -> kbinxml / binary codec name (xrpc-go EncodingByName).
 _ENCODING_ALIASES = {
@@ -194,6 +213,7 @@ def _parse_eamuse_info(header):
 
 # (min_ext, version) newest-first; first match with ext >= min_ext wins.
 _LDJ_VERSIONS = (
+    (2026091600, 34),
     (2025091700, 33),
     (2024100900, 32),
     (2023101800, 31),
@@ -295,20 +315,22 @@ async def core_process_request(request):
         request.xml_encoding = _detect_text_xml_encoding(xml_dec)
 
     xml_text = None
-    if config.verbose_log:
+    if config.verbose_log or config.log_to_file:
         xml_text = xml.to_text()
         eamuse_info = (
             request.headers.get("X-Eamuse-Info") if request.is_encrypted else "none"
         )
-        print()
-        print("\033[94mREQUEST\033[0m:")
-        print(f"X-Eamuse-Info: {eamuse_info}")
-        print(f"X-Compress: {request.compress}")
-        print(
-            f"Encoding: {_xml_decl_name(request.xml_encoding)}"
-            f" ({'binary' if request.is_binxml else 'text'})"
+        _verbose_log(
+            "",
+            "\033[94mREQUEST\033[0m:",
+            f"X-Eamuse-Info: {eamuse_info}",
+            f"X-Compress: {request.compress}",
+            (
+                f"Encoding: {_xml_decl_name(request.xml_encoding)}"
+                f" ({'binary' if request.is_binxml else 'text'})"
+            ),
+            xml_text,
         )
-        print(xml_text)
 
     model_parts = (root.attrib["model"], *root.attrib["model"].split(":"))
     module = root[0].tag
@@ -373,14 +395,16 @@ def core_prepare_response(request, xml):
     else:
         response = bytes(response)
 
-    if config.verbose_log:
-        print("\033[91mRESPONSE\033[0m:")
-        print(f"X-Eamuse-Info: {response_headers.get('X-Eamuse-Info', 'none')}")
-        print(f"X-Compress: {response_headers['X-Compress']}")
-        print(
-            f"Encoding: {_xml_decl_name(enc)}"
-            f" ({'binary' if request.is_binxml else 'text'})"
+    if config.verbose_log or config.log_to_file:
+        _verbose_log(
+            "\033[91mRESPONSE\033[0m:",
+            f"X-Eamuse-Info: {response_headers.get('X-Eamuse-Info', 'none')}",
+            f"X-Compress: {response_headers['X-Compress']}",
+            (
+                f"Encoding: {_xml_decl_name(enc)}"
+                f" ({'binary' if request.is_binxml else 'text'})"
+            ),
+            binxml.to_text(),
         )
-        print(binxml.to_text())
 
     return response, response_headers

@@ -30,6 +30,7 @@ settings = {
         "port",
         "response_compression",
         "verbose_log",
+        "log_to_file",
         "arcade",
         "paseli",
         "maintenance_mode",

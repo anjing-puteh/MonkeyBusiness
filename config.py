@@ -18,6 +18,7 @@ ip = get_ip()
 port = 8000
 response_compression = False
 verbose_log = False
+log_to_file = False
 dev_reload = False
 
 arcade = "Ｍ０ＮＫＹＢＵＳ１Ｎ３Ｚ"
