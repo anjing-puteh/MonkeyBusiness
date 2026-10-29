@@ -9,8 +9,8 @@ Run [start.bat (Windows)](start.bat) or [start.sh (Linux, MacOS)](start.sh)
 [web interface](https://github.com/drmext/BounceTrippy/releases), [score import](utils/db)
 
 ## Playable Games
-- IIDX 18-20, 29-33 (Online Arena/BPL support)
-- DDR A20P, A3, WORLD (OmniMIX/GF, BPL, and [Fake PFREE](https://github.com/drmext/BemaniPatcher/blob/nopr/ddra3.html#L133) support)
+- IIDX 18-20, 29-34 (Online Arena/BPL support)
+- DDR A20P, A3, WORLD (OmniMIX/GF, BPL, and Fake PFREE support)
 - GD 6-10 DELTA (Battle Mode support)
 - DRS
 - NOST 3
@@ -20,12 +20,10 @@ Run [start.bat (Windows)](start.bat) or [start.sh (Linux, MacOS)](start.sh)
 
 ## Troubleshooting
 
-- Delete [or fix](start.bat#L9) `/.venv` if the server folder is moved or python is upgraded
+- Delete [or fix](make_venv_portable.bat) `/.venv` if the server folder is moved or python is upgraded
 
 - DRS, GD, NOST, and SDVX require mdb xml files copied to the server folder
 
-- **URL Slash 1 (On)** [may still be required in rare cases](modules/__init__.py#L46)
-
-- **URL Slash 0 (Off)** may be required in other cases
-
 - When initially creating a DDR profile, complete an entire credit without pfree hacks
+
+- Update the webui

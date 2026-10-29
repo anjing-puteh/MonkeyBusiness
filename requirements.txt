@@ -1,6 +1,5 @@
-fastapi
+starlette
+uvicorn[standard]
 kbinxml>=2.0
 pycryptodomex
-python-multipart
 tinydb
-uvicorn[standard]
